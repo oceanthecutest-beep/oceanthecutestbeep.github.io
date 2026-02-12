@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StyleMatch PRO</title>
+<title>Style Your Life</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
@@ -71,7 +71,10 @@ video {
 <div class="card">
   <input type="text" id="username" placeholder="Enter your name">
   <br>
-  <button class="primary" onclick="start()">Start Scan</button>
+  <button class="primary" onclick="analyze()">Analyze Me</button>
+</div>
+<div id="result" class="card"
+style="display:none;"></div>dive>
 </div>
 
 <div id="app" style="display:none;">
