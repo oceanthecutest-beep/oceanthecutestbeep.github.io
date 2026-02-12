@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StyleMatch PRO</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f0f0f;
+  color: white;
+  text-align: center;
+}
+
+header {
+  padding: 20px;
+  font-size: 22px;
+  letter-spacing: 2px;
+}
+
+.card {
+  background: #1c1c1c;
+  margin: 20px;
+  padding: 20px;
+  border-radius: 20px;
+}
+
+button {
+  padding: 12px 20px;
+  border-radius: 30px;
+  border: none;
+  margin: 10px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.primary {
+  background: white;
+  color: black;
+}
+
+video {
+  width: 90%;
+  max-width: 400px;
+  border-radius: 20px;
+}
+
+.palette {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.color-box {
+  width: 40px;
+  height: 40px;
+  margin: 5px;
+  border-radius: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<header>STYLEMATCH PRO ✨</header>
+
+<div class="card">
+  <input type="text" id="username" placeholder="Enter your name">
+  <br>
+  <button class="primary" onclick="start()">Start Scan</button>
+</div>
+
+<div id="app" style="display:none;">
+  <div class="card">
+    <video id="video" autoplay playsinline></video>
+    <br>
+    <button class="primary" onclick="analyze()">Analyze Me</button>
+  </div>
+
+  <div id="result" class="card" style="display:none;"></div>
+</div>
+
+<script>
+let pose, camera, latestResults;
+
+function start() {
+  const name = document.getElementById("username").value;
+  if (!name) return alert("Enter name");
+
+  localStorage.setItem("user", name);
+  document.getElementById("app").style.display = "block";
+
+  initCamera();
+}
+
+function initCamera() {
+  const videoElement = document.getElementById("video");
+
+  pose = new Pose({
+    locateFile: file => https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}
+  });
+
+  pose.onResults(results => {
+    latestResults = results;
+  });
+
+  camera = new Camera(videoElement, {
+    onFrame: async () => {
+      await pose.send({ image: videoElement });
+    },
+    width: 640,
+    height: 480
+  });
+
+  camera.start();
+}
+
+function analyze() {
+  if (!latestResults || !latestResults.poseLandmarks) {
+    return alert("Stand fully in frame.");
+  }
+
+  const lm = latestResults.poseLandmarks;
+  const shoulder = Math.abs(lm[11].x - lm[12].x);
+  const hips = Math.abs(lm[23].x - lm[24].x);
+
+  let shape;
+
+  if (Math.abs(shoulder - hips) < 0.04) shape = "Rectangle";
+  else if (shoulder > hips) shape = "Inverted Triangle";
+  else shape = "Pear";
+
+  const skinTone = detectSkinTone();
+
+  showResult(shape, skinTone);
+}
+
+function detectSkinTone() {
+  const video = document.getElementById("video");
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0);
+
+  const pixel = ctx.getImageData(
+    canvas.width/2,
+    canvas.height/3,
+    1,1
+  ).data;
+
+  const brightness = (pixel[0] + pixel[1] + pixel[2]) / 3;
+
+  if (brightness > 170) return "Light";
+  if (brightness > 120) return "Medium";
+  return "Deep";
+}
+
+function showResult(shape, tone) {
+  const result = document.getElementById("result");
+
+  const palettes = {
+    "Light": ["#f8d7da","#f5c6cb","#ffeeba"],
+    "Medium": ["#d4a373","#ccd5ae","#faedcd"],
+    "Deep": ["#6d6875","#b5838d","#ffb4a2"]
+  };
+
+  const boxes = palettes[tone]
+    .map(c => <div class="color-box" style="background:${c}"></div>)
+    .join("");
+
+  result.innerHTML = `
+    <h2>${localStorage.getItem("user")}'s Results</h2>
+    <p><strong>Body Shape:</strong> ${shape}</p>
+    <p><strong>Skin Tone Category:</strong> ${tone}</p>
+    <h3>Your Best Colors</h3>
+    <div class="palette">${boxes}</div>
+    <br>
+    <button class="primary" onclick="downloadGuide('${shape}','${tone}')">
+      Download Premium Style Guide
+    </button>
+  `;
+
+  result.style.display = "block";
+}
+
+function downloadGuide(shape, tone) {
+  const content = `
+StyleMatch Premium Guide
+
+Body Shape: ${shape}
+Skin Tone: ${tone}
+
+Recommended Styles:
+- Focus on balance and proportion
+- Use recommended color palette
+- Structure outfits to enhance silhouette
+  `;
+
+  const blob = new Blob([content], { type: "text/plain" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "StyleGuide.txt";
+  link.click();
+}
+</script>
+
+</body>
+</html>
